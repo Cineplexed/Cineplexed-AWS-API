@@ -227,6 +227,12 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
                         log("ERROR", "manager missing for key creation")
                         ApiResponse = events.APIGatewayProxyResponse{Body: "Error: missing query parameter manager or scope", StatusCode: 500}
                     } else {
+                        if key.Scope >= 3 {
+                            key.Scope = 2
+                        }
+                        if key.Scope <= 0 {
+                            key.Scope = 1
+                        }
                         key.APIKey = generateRandomString(20)
                         key.CreatedAt = time.Now().String()
                         key.NumCalls = 0
