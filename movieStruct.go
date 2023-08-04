@@ -181,6 +181,14 @@ type Validation struct {
 	Data UserInfo `json:"data"`
 }
 
+type Key struct {
+	APIKey string `gorm:"column:api_key" json:"key"`
+	CreatedAt string `gorm:"column:created_at" json:"createdAt"`
+	NumCalls int `gorm:"column:num_calls" json:"numCalls"`
+	Scope int `gorm:"column:key_scope" json:"scope"`
+	Manager string `gorm:"column:manager" json:"manager"`
+}
+
 //lint:ignore U1000 Used for Swagger
 type docs_ID struct {
 	ID int `json:"id"`
