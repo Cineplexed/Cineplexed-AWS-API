@@ -20,7 +20,6 @@ var db *gorm.DB = connectDB()
 func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
     var ApiResponse events.APIGatewayProxyResponse
 
-    fmt.Println("Key Param: " + request.QueryStringParameters["key"])
     if len(request.QueryStringParameters["key"]) != 0 {
         var key Key
         result := db.Table("keys").Where("api_key = ?", request.QueryStringParameters["key"]).First(&key)
@@ -219,7 +218,7 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
                     ApiResponse = events.APIGatewayProxyResponse{Body: "Please switch to the correct endpoint or upgrade to a key of higher scope", StatusCode: 500}
                 }
             case "makeKey":
-                if request.HTTPMethod == "POST" && key.Scope == 3 {
+                if request.HTTPMethod == "POST" && key.Scope == 3 && request.QueryStringParameters["password"] == os.Getenv("MasterPassword") {
                     var key Key
                     key.Manager = request.QueryStringParameters["manager"]
                     key.Scope, _ = strconv.Atoi(request.QueryStringParameters["scope"])
@@ -242,7 +241,6 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
                             log("ERROR", "Failed to post data to postgres")
                             ApiResponse = events.APIGatewayProxyResponse{Body: "Failed to create key in postgres", StatusCode: 500}
                         } else {
-                            fmt.Println("Created key")
                             bytes, _ := json.Marshal(&key)
                             ApiResponse = events.APIGatewayProxyResponse{Body: string(bytes), StatusCode: 200}
                         }
