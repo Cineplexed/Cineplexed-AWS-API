@@ -128,6 +128,51 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
                 ApiResponse = events.APIGatewayProxyResponse{Body: "Something went wrong", StatusCode: 500}
             }
         }
+    case "getUnlimited":
+        if request.HTTPMethod == "GET" {
+            id := request.Headers["User-Id"]
+            if len(id) > 0 {
+                if getUnlimitedMovie(id) {
+                    ApiResponse = events.APIGatewayProxyResponse{Body: "Got new unlimited movie", StatusCode: 200}
+                } else {
+                    ApiResponse = events.APIGatewayProxyResponse{Body: "Failed to get new unlimited movie", StatusCode: 500}
+                }
+            } else {
+                ApiResponse = events.APIGatewayProxyResponse{Body: "Error: no user id found", StatusCode: 500}
+            }
+        }
+    case "getUnlimitedMovieDetails":
+        if request.HTTPMethod == "GET" {
+            id := request.QueryStringParameters["id"]
+            if id != "" {
+                if request.Headers["User-Id"] != "" {
+                    numId, _ := strconv.Atoi(id)
+                    response := getUnlimitedMovieWithDetail(numId, request.Headers["User-Id"])
+                    bytes, _ := json.Marshal(response)
+                    ApiResponse = events.APIGatewayProxyResponse{Body: string(bytes), StatusCode: 200}
+                    log("INFO", "Got movie details")
+                } else {
+                    ApiResponse = events.APIGatewayProxyResponse{Body: "Error: user id is missing", StatusCode: 500}
+                    log("WARNING", "User ID missing when getting unlimited movie details")
+                }
+            } else {
+                ApiResponse = events.APIGatewayProxyResponse{Body: "Error: Query Parameter id missing", StatusCode: 500}
+                log("WARNING", "Query parameter missing when getting movie details")
+            }
+        }
+    case "finishUnlimited":
+        if request.HTTPMethod == "POST" {
+            id := request.Headers["User-Id"]
+            if id != "" {
+                if (solvedUnlimited(id)) {
+                    ApiResponse = events.APIGatewayProxyResponse{Body: "Submitted info", StatusCode: 200}
+                } else {
+                    ApiResponse = events.APIGatewayProxyResponse{Body: "Failed to submit info", StatusCode: 500}
+                }
+            } else {
+                ApiResponse = events.APIGatewayProxyResponse{Body: "Error: user id is missing", StatusCode: 500}
+            }
+        }
     default:
         ApiResponse = events.APIGatewayProxyResponse{Body: "Please enter a valid endpoint", StatusCode: 500}
     }

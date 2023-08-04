@@ -245,7 +245,6 @@ func getDailyMovie() {
 				arrActors[i] = string(detailedEntry.GuessedMovie.Actors[i].Name)
 			}
 
-			fmt.Println(nextTime.Format("2006") + "/" + nextTime.Format("01") + "/" + nextTime.Format("02"))
 			var complete selections = selections{
 				Date: nextTime.Format("2006") + "/" + nextTime.Format("01") + "/" + nextTime.Format("02"), 
 				Movie: detailedEntry.GuessedMovie.Title, 
@@ -301,4 +300,112 @@ func getTargetTime() {
 		}
 		log("INFO", "Got new target time")
 	}
+}
+
+func getUnlimitedMovieWithDetail(id int, userId string) Info {
+	movieDetailReq := baseUrl + "/" + fmt.Sprint(id) + "?api_key=" + key
+	response, err := http.Get(movieDetailReq)
+	if err != nil {
+		log("ERROR", "Could not get movie details when getting movie details")
+	} else {
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			log("ERROR", "Could not read response when getting movie details")
+		} else {
+			var entry MovieDetails
+			json.Unmarshal(body, &entry)
+			
+			var producers Producers
+			json.Unmarshal(body, &producers)
+
+			if len(producers.Companies) > 0 {
+				entry.Producer = producers.Companies[0].Name
+			} 
+			if len(entry.ReleaseYear) >= 4 { 
+				entry.ReleaseYear = entry.ReleaseYear[0:4]
+			} else {
+				entry.ReleaseYear = "Unreleased"
+			}
+
+			movieActorReq := baseUrl + "/" + fmt.Sprint(id) + "/credits?api_key=" + key
+			response, err := http.Get(movieActorReq)
+			if err != nil {
+				log("ERROR", "Could not get cast details when getting movie details")
+			} else {
+				body, err := io.ReadAll(response.Body)
+				if err != nil {
+					log("ERROR", "Could not read response when getting movie details")
+				} else {
+					var actors Actors
+					json.Unmarshal(body, &actors)
+
+					var crew Crew
+					json.Unmarshal(body, &crew)
+
+					for i := 0; i < len(crew.EntireCrew); i++ {
+						if crew.EntireCrew[i].Job == "Director" {
+							entry.Director = crew.EntireCrew[i].Name
+							break
+						}
+					}
+
+					var arr []Actor
+					if len(actors.Actors) < 10 {
+						arr = make([]Actor, len(actors.Actors))
+					} else {
+						arr = make([]Actor, 10)
+					}
+					for i := 0; i < len(actors.Actors) && i < len(arr); i++ {
+						arr[i].Name = actors.Actors[i].Name
+						arr[i].Headshot = actors.Actors[i].Headshot
+					}
+					entry.Actors = arr
+				}
+			}
+			var daily UserUnlimited
+			db.Table("users").Where("id = ?", userId).First(&daily)
+
+			var compDetails Comparison
+			compDetails.Correct = (daily.Movie == entry.Title)
+			compDetails.Collection = ((daily.Collection != "" && entry.Collection.Name != "") && daily.Collection == entry.Collection.Name)
+			dailyYear, _ := strconv.Atoi(daily.ReleaseYear)
+			entryYear, _ := strconv.Atoi(entry.ReleaseYear)
+			compDetails.YearComparison = (dailyYear - entryYear) * -1
+			compDetails.GrossComparison = (daily.Revenue - entry.Revenue) * -1
+			compDetails.DirectorComparison = (daily.Director == entry.Director)
+
+			actorArr := make([]Actor, len(daily.Actors))
+			for i := 0; i < len(actorArr); i++ {
+				actorArr[i] = Actor{Name: daily.Actors[i]}
+			}
+			tempActorArr := getMatchingActors(Actors{Actors: actorArr}, Actors{Actors: entry.Actors})
+			if len(tempActorArr) > 0 {
+				compDetails.Actors = tempActorArr
+			} else {
+				compDetails.Actors = make([]Actor, 0)
+			}
+
+			genreArr := make([]Genre, len(daily.Genres))
+			for i := 0; i < len(genreArr); i++ {
+				genreArr[i] = Genre{GenreVal: daily.Genres[i]}
+			}
+			tempGenreArr := getMatchingGeres(genreArr, entry.Genres)
+			if len(tempGenreArr) > 0 {
+				compDetails.Genres = tempGenreArr
+			} else {
+				compDetails.Genres = make([]Genre, 0)
+			}
+
+			fmt.Println("INFO", "details given")
+
+			var info Info
+			info.GuessedMovie = entry
+			info.Compare = compDetails
+			fmt.Println(compDetails)
+			return info
+		}
+	}
+	log("ERROR", "Could not give movie details")
+	var info Info
+	return info
 }

@@ -2,6 +2,11 @@ package main
 
 import (
 	"time"
+	"math/rand"
+	"net/http"
+	"io"
+	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -175,4 +180,89 @@ func finishGame(status bool, userId string) bool {
 		}
 	}
 	return false
+}
+
+func getUnlimitedMovie(userId string) bool {
+	var entry UserUnlimited
+	result := db.Table("users").Where("id = ?", userId).First(&entry)
+	if result.Error != nil {
+		log("ERROR", "Failed to query postgres")
+		return false
+	} else {
+		if entry.Active {
+			page := rand.Intn(25) + 1
+			req := randUrl + "?api_key=" + key + "&page=" + fmt.Sprint(page) 
+			response, err := http.Get(req)
+			if err != nil {
+				log("ERROR", "Could not perform API call")
+				return false
+			} else {
+				body, err := io.ReadAll(response.Body)
+				if err != nil {
+					log("ERROR", "Could not read response")
+					return false
+				} else {
+					var collection MovieDBResponseArray
+					json.Unmarshal(body, &collection)
+					index := rand.Intn(20)
+					item := collection.Results[index]
+					detailedEntry := getMovieWithDetail(item.ID)
+
+					var arrGenres []string = make([]string, len(detailedEntry.GuessedMovie.Genres))
+					for i := 0; i < len(detailedEntry.GuessedMovie.Genres); i++ {
+						arrGenres[i] = string(detailedEntry.GuessedMovie.Genres[i].GenreVal)
+					}
+
+					var arrActors []string = make([]string, len(detailedEntry.GuessedMovie.Actors))
+					for i := 0; i < len(detailedEntry.GuessedMovie.Actors); i++ {
+						arrActors[i] = string(detailedEntry.GuessedMovie.Actors[i].Name)
+					}
+
+					entry.Movie = detailedEntry.GuessedMovie.Title
+					entry.Tagline = detailedEntry.GuessedMovie.Tagline
+					entry.Overview = detailedEntry.GuessedMovie.Overview
+					entry.Genres = arrGenres
+					entry.Actors = arrActors
+					entry.Revenue = detailedEntry.GuessedMovie.Revenue
+					entry.Poster = detailedEntry.GuessedMovie.Poster
+					entry.ReleaseYear = detailedEntry.GuessedMovie.ReleaseYear
+					entry.Director = detailedEntry.GuessedMovie.Director
+					entry.Producer = detailedEntry.GuessedMovie.Producer
+					entry.IMDB = detailedEntry.GuessedMovie.IMDB
+					entry.Collection = detailedEntry.GuessedMovie.Collection.Name
+
+					result := db.Table("users").Save(&entry)
+					if result.Error != nil {
+						log("ERROR", "Could not save unlimited movie")
+						return false
+					} else {
+						log("INFO", "Updated unlimited movie")
+						return true
+					}
+				}
+			}
+		} else {
+			log("WARNING", "Attempted to create unlimited movie on inactive account")
+			return false
+		}
+	}
+}
+
+func solvedUnlimited(userId string) bool {
+	var entry UserUnlimited
+	db.Table("users").Where("id = ?", userId).First(&entry)
+	if entry.Active {
+		entry.UnlimitedSolves = entry.UnlimitedSolves + 1
+		result := db.Table("users").Save(&entry)
+		if result.Error != nil {
+			log("ERROR", "Could not store player unlimited win in postgres")
+			return false 
+		} else {
+			log("INFO", "Stored player win")
+			return true
+		}
+	} else {
+		log("WARNING", "Attempted to log win on inactive account")
+		return false
+	}
 }

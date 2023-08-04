@@ -66,6 +66,32 @@ type GameStatus struct {
 	Won bool `json:"won"`
 }
 
+type UserUnlimited struct {
+	ID string `gorm:"column:id"`
+	Username string `gorm:"column:username"`
+	Password string `gorm:"column:password"`
+	CreatedAt string `gorm:"column:created_at"`
+	DeletedAt string `gorm:"column:deleted_at"`
+	UpdatedAt string `gorm:"column:updated_at"`
+	SolvedPuzzles int `gorm:"column:solved_puzzles"`
+	FailedPuzzles int `gorm:"column:failed_puzzles"`
+	LastSolvedPuzzle string `gorm:"column:last_solved_puzzle"`
+	Active bool `gorm:"column:active"`
+	Movie string `gorm:"column:movie"`
+	Tagline string `gorm:"column:tagline"`
+	Overview string `gorm:"column:overview"`
+	Genres pq.StringArray `gorm:"type:text[]; column:genres"`
+	Actors pq.StringArray `gorm:"type:text[]; column:actors"` 
+	Revenue int `gorm:"column:revenue"`
+	Poster string `gorm:"column:poster"`
+	ReleaseYear string `gorm:"column:year"`
+	Director string `gorm:"column:director"`
+	Producer string `gorm:"column:producer"`
+	IMDB string `gorm:"column:imdbid"`
+	Collection string `gorm:"column:collection"`
+	UnlimitedSolves int `gorm:"column:solved_unlimited"`
+}
+
 type Users struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
