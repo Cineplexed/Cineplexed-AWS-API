@@ -92,6 +92,22 @@ type UserUnlimited struct {
 	UnlimitedSolves int `gorm:"column:solved_unlimited"`
 }
 
+type UserPuzzle struct {
+	Movie string `gorm:"column:movie"`
+	Tagline string `gorm:"column:tagline"`
+	Overview string `gorm:"column:overview"`
+	Genres pq.StringArray `gorm:"type:text[]; column:genres"`
+	Actors pq.StringArray `gorm:"type:text[]; column:actors"` 
+	Revenue int `gorm:"column:revenue"`
+	Poster string `gorm:"column:poster"`
+	ReleaseYear string `gorm:"column:year"`
+	Director string `gorm:"column:director"`
+	Producer string `gorm:"column:producer"`
+	IMDB string `gorm:"column:imdbid"`
+	Collection string `gorm:"column:collection"`
+	UnlimitedSolves int `gorm:"column:solved_unlimited"`
+}
+
 type Users struct {
 	Username string `json:"username"`
 	Password string `json:"password"`

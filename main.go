@@ -20,6 +20,9 @@ var db *gorm.DB = connectDB()
 func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
     var ApiResponse events.APIGatewayProxyResponse
 
+    bytes, _ := json.Marshal(&request)
+    fmt.Println(string(bytes))
+
     if len(request.QueryStringParameters["key"]) != 0 {
         var key Key
         result := db.Table("keys").Where("api_key = ?", request.QueryStringParameters["key"]).First(&key)
@@ -154,8 +157,14 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
                 if request.HTTPMethod == "POST" && key.Scope >= 1 {
                     var entry GameStatus
                     json.Unmarshal([]byte(request.Body), &entry)
+
+                    var movie selections
+                    db.Table("selections").Last(&movie)
+
+                    bytes, _ := json.Marshal(movie)
+
                     if finishGame(entry.Won, request.Headers["User-Id"]) {
-                        ApiResponse = events.APIGatewayProxyResponse{Body: "Submitted info", StatusCode: 200}
+                        ApiResponse = events.APIGatewayProxyResponse{Body: string(bytes), StatusCode: 200}
                     } else {
                         ApiResponse = events.APIGatewayProxyResponse{Body: "Something went wrong", StatusCode: 500}
                     }
@@ -206,7 +215,13 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
                     id := request.Headers["User-Id"]
                     if id != "" {
                         if (solvedUnlimited(id)) {
-                            ApiResponse = events.APIGatewayProxyResponse{Body: "Submitted info", StatusCode: 200}
+
+                            var entry UserPuzzle
+                            db.Table("users").Where("id = ?", id).Last(&entry)
+
+                            bytes, _ := json.Marshal(&entry)
+
+                            ApiResponse = events.APIGatewayProxyResponse{Body: string(bytes), StatusCode: 200}
                         } else {
                             ApiResponse = events.APIGatewayProxyResponse{Body: "Failed to submit info", StatusCode: 500}
                         }
@@ -258,7 +273,12 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
         log("ERROR", "User made call without API Key present")
         ApiResponse = events.APIGatewayProxyResponse{Body: "Please enter a valid API key", StatusCode: 500}
     }
-
+    ApiResponse.Headers = map[string]string{
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        "Access-Control-Allow-Methods": "OPTIONS,POST,GET,DELETE",
+        "Access-Control-Allow-Credentials": "true",
+    }
     return ApiResponse, nil
 }
 
