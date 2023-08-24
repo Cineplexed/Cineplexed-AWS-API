@@ -80,6 +80,7 @@ func getMovieWithDetail(id int) Info {
 	compDetails.YearComparison = (dailyYear - entryYear) * -1
 	compDetails.GrossComparison = (daily.Revenue - entry.Revenue) * -1
 	compDetails.DirectorComparison = (daily.Director == entry.Director)
+	compDetails.ProducerComparison = (daily.Producer == entry.Producer)
 
 	actorArr := make([]Actor, len(daily.Actors))
 	for i := 0; i < len(actorArr); i++ {
@@ -200,12 +201,16 @@ func getDailyMovie() {
 				Producer: detailedEntry.GuessedMovie.Producer,
 				IMDB: detailedEntry.GuessedMovie.IMDB,
 				Collection: detailedEntry.GuessedMovie.Collection.Name}
-			db.Table("selections")
-			result := db.Create(&complete)
-			if result.Error != nil {
-				log("ERROR", "Could not create new daily movie")
+			if complete.Revenue == 0 {
+				getDailyMovie()
 			} else {
-				log("INFO", "Got new daily movie")
+				db.Table("selections")
+				result := db.Create(&complete)
+				if result.Error != nil {
+					log("ERROR", "Could not create new daily movie")
+				} else {
+					log("INFO", "Got new daily movie")
+				}
 			}
 		}
 	}
@@ -255,6 +260,7 @@ func getUnlimitedMovieWithDetail(id int, userId string) Info {
 	compDetails.YearComparison = (dailyYear - entryYear) * -1
 	compDetails.GrossComparison = (daily.Revenue - entry.Revenue) * -1
 	compDetails.DirectorComparison = (daily.Director == entry.Director)
+	compDetails.ProducerComparison = (daily.Producer == entry.Producer)
 
 	actorArr := make([]Actor, len(daily.Actors))
 	for i := 0; i < len(actorArr); i++ {

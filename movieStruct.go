@@ -137,6 +137,7 @@ type Comparison struct {
 	YearComparison int `json:"yearComparison"`
 	GrossComparison int `json:"revenueComparison"`
 	DirectorComparison bool `json:"directorComparison"`
+	ProducerComparison bool `json:"producerComparison"`
 	Genres []Genre `json:"genres"`
 	Actors []Actor `json:"actors"`
 }
